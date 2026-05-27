@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.env
+
+# TensorFlow
+model/training/
+model/exported_model/
+model/pre-trained-model/
+*.ckpt
+*.index
+*.data-*
+
+# Dataset
+model/data/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
