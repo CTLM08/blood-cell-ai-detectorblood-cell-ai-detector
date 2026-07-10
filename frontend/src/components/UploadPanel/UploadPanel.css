@@ -1,0 +1,39 @@
+.upload-panel {
+  border: 2px dashed #2a2d3e;
+  border-radius: 14px;
+  padding: 48px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: #1a1d2e;
+  user-select: none;
+}
+
+.upload-panel:hover,
+.upload-panel.dragging {
+  border-color: #7c83fd;
+  background: #1e2240;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.upload-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.upload-subtitle {
+  color: #a0a8c0;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.upload-error {
+  margin-top: 12px;
+  color: #ff6b6b;
+  font-size: 0.85rem;
+}
