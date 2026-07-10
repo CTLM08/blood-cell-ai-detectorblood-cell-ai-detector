@@ -5,13 +5,6 @@ import os
 
 CELL_TYPES = ["RBC", "WBC", "Platelet"]
 
-# Maps TF OD API class index (1-based) → cell type name
-LABEL_MAP = {
-    1: "RBC",
-    2: "WBC",
-    3: "Platelet",
-}
-
 # Colour used when drawing bounding boxes (hex strings for frontend, RGB for backend)
 CELL_COLOURS = {
     "RBC":      {"hex": "#FF4444", "rgb": (255, 68, 68)},
@@ -21,12 +14,28 @@ CELL_COLOURS = {
 
 CONFIDENCE_THRESHOLD = 0.5   # detections below this score are ignored
 
+# Maps a raw class name (as trained, e.g. the BCCD "Platelets" label) → our
+# canonical cell type. Case-insensitive. Unknown names return None and are
+# ignored during formatting (e.g. COCO classes from a stand-in model).
+NAME_NORMALIZATION = {
+    "rbc":       "RBC",
+    "wbc":       "WBC",
+    "platelet":  "Platelet",
+    "platelets": "Platelet",
+}
+
+
+def canonical_cell_type(raw_name: str):
+    """Return the canonical cell type for a trained class name, or None."""
+    if raw_name is None:
+        return None
+    return NAME_NORMALIZATION.get(str(raw_name).strip().lower())
+
+
 # ── Paths ──────────────────────────────────────────────────────────────────
 ROOT_DIR         = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR        = os.path.join(ROOT_DIR, "model")
 DATA_DIR         = os.path.join(MODEL_DIR, "data")
-TRAINING_DIR     = os.path.join(MODEL_DIR, "training")
-EXPORTED_DIR     = os.path.join(MODEL_DIR, "exported_model")
-PRETRAINED_DIR   = os.path.join(MODEL_DIR, "pre-trained-model")
-LABEL_MAP_PATH   = os.path.join(MODEL_DIR, "label_map.pbtxt")
-PIPELINE_CONFIG  = os.path.join(MODEL_DIR, "pipeline.config")
+RUNS_DIR         = os.path.join(MODEL_DIR, "runs")          # YOLO training outputs
+WEIGHTS_DIR      = os.path.join(MODEL_DIR, "weights")       # exported best.pt lives here
+WEIGHTS_PATH     = os.path.join(WEIGHTS_DIR, "best.pt")     # loaded by the backend

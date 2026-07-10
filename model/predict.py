@@ -1,75 +1,67 @@
-"""Inference utility — loads the exported SavedModel and runs detection."""
-import tensorflow as tf
+"""Inference utility — loads the trained YOLO model and runs detection."""
 import numpy as np
 from PIL import Image
-from typing import Any
-from model.config import EXPORTED_DIR, LABEL_MAP, CELL_TYPES, CONFIDENCE_THRESHOLD
-import os
+from ultralytics import YOLO
+from model.config import WEIGHTS_PATH, CELL_TYPES, CONFIDENCE_THRESHOLD, canonical_cell_type
 
 
 def load_model(model_path: str = None):
-    """Load the TF SavedModel from disk. Returns a callable TF function."""
-    path = model_path or os.path.join(EXPORTED_DIR, "saved_model")
-    model = tf.saved_model.load(path)
-    return model.signatures["serving_default"]
+    """Load a YOLO model from disk (a .pt file). Returns the YOLO instance."""
+    path = model_path or WEIGHTS_PATH
+    return YOLO(path)
 
 
 def preprocess_image(image_path: str):
     """
-    Load an image file and convert to a (1, H, W, 3) uint8 tensor.
-    Returns: (tensor, original_width, original_height)
+    Load an image file as an RGB uint8 array.
+    Returns: (image_array, original_width, original_height)
     """
     image = Image.open(image_path).convert("RGB")
     width, height = image.size
     image_np = np.array(image, dtype=np.uint8)
-    tensor = tf.convert_to_tensor(image_np, dtype=tf.uint8)
-    tensor = tensor[tf.newaxis, ...]   # add batch dimension
-    return tensor, width, height
+    return image_np, width, height
 
 
-def format_detections(
-    raw: dict[str, Any],
-    width: int,
-    height: int,
-    threshold: float = CONFIDENCE_THRESHOLD,
-) -> tuple[list, dict, int, int]:
+def format_detections(boxes_xyxy, class_ids, scores, names,
+                      threshold: float = CONFIDENCE_THRESHOLD):
     """
-    Parse raw TF OD API output into a clean list of detections.
+    Convert raw YOLO outputs into the API's clean detection list.
+
+    Args:
+        boxes_xyxy — iterable of [x1, y1, x2, y2] in pixel coordinates
+        class_ids  — iterable of class indices (ints)
+        scores     — iterable of confidence scores
+        names      — dict {class_index: class_name} from the trained model
+        threshold  — minimum confidence to keep a detection
 
     Returns:
-        detections  — list of {cell_type, confidence, box}
+        detections  — list of {cell_type, confidence, box: {x, y, w, h}}
         cell_counts — {RBC: int, WBC: int, Platelet: int}
-        width       — image width (pixels)
-        height      — image height (pixels)
     """
-    # np.array() works on both TF tensors and plain numpy arrays (important for tests)
-    boxes   = np.array(raw["detection_boxes"][0])
-    classes = np.array(raw["detection_classes"][0]).astype(int)
-    scores  = np.array(raw["detection_scores"][0])
-
     detections = []
     cell_counts = {cell: 0 for cell in CELL_TYPES}
 
-    for i, score in enumerate(scores):
+    for box, cid, score in zip(boxes_xyxy, class_ids, scores):
         if score < threshold:
             continue
-        cell_type = LABEL_MAP.get(classes[i])
+        raw_name = names.get(int(cid)) if isinstance(names, dict) else names[int(cid)]
+        cell_type = canonical_cell_type(raw_name)
         if cell_type is None:
             continue
-        ymin, xmin, ymax, xmax = boxes[i]
+        x1, y1, x2, y2 = box
         detections.append({
             "cell_type":  cell_type,
             "confidence": float(round(float(score), 4)),
             "box": {
-                "x": int(xmin * width),
-                "y": int(ymin * height),
-                "w": int((xmax - xmin) * width),
-                "h": int((ymax - ymin) * height),
+                "x": int(x1),
+                "y": int(y1),
+                "w": int(x2 - x1),
+                "h": int(y2 - y1),
             },
         })
         cell_counts[cell_type] += 1
 
-    return detections, cell_counts, width, height
+    return detections, cell_counts
 
 
 def predict(model, image_path: str) -> dict:
@@ -77,12 +69,22 @@ def predict(model, image_path: str) -> dict:
     Run full inference on an image file.
     Returns the formatted response dict ready for the API.
     """
-    tensor, width, height = preprocess_image(image_path)
-    raw = model(tensor)
-    detections, cell_counts, w, h = format_detections(raw, width, height)
+    image_np, width, height = preprocess_image(image_path)
+    results = model(image_np, verbose=False)
+    result = results[0]
+    boxes = result.boxes
+
+    if boxes is None or len(boxes) == 0:
+        detections, cell_counts = [], {cell: 0 for cell in CELL_TYPES}
+    else:
+        xyxy   = boxes.xyxy.cpu().numpy().tolist()
+        cls    = boxes.cls.cpu().numpy().tolist()
+        conf   = boxes.conf.cpu().numpy().tolist()
+        detections, cell_counts = format_detections(xyxy, cls, conf, result.names)
+
     return {
-        "image_width":  w,
-        "image_height": h,
+        "image_width":  width,
+        "image_height": height,
         "detections":   detections,
         "cell_counts":  cell_counts,
     }

@@ -1,45 +1,62 @@
-import pytest
 import numpy as np
-from unittest.mock import MagicMock, patch
+import pytest
 from model.predict import preprocess_image, format_detections
 
 
-def test_preprocess_image_returns_correct_shape(tmp_path):
-    """preprocess_image should return a uint8 tensor of shape (1, H, W, 3)."""
+def test_preprocess_image_returns_rgb_array(tmp_path):
+    """preprocess_image should return an (H, W, 3) uint8 array + dimensions."""
     from PIL import Image
     img = Image.fromarray(np.zeros((100, 120, 3), dtype=np.uint8))
     img_path = str(tmp_path / "test.jpg")
     img.save(img_path)
 
-    tensor, width, height = preprocess_image(img_path)
-    assert tensor.shape == (1, 100, 120, 3)
+    array, width, height = preprocess_image(img_path)
+    assert array.shape == (100, 120, 3)
+    assert array.dtype == np.uint8
     assert width == 120
     assert height == 100
 
 
 def test_format_detections_filters_low_confidence():
     """format_detections should exclude detections below threshold."""
-    import numpy as np
-    raw = {
-        "detection_boxes":   [np.array([[0.1, 0.1, 0.5, 0.5], [0.2, 0.2, 0.6, 0.6]])],
-        "detection_classes": [np.array([1.0, 2.0])],
-        "detection_scores":  [np.array([0.9, 0.2])],   # second one is below 0.5 threshold
-    }
-    results, counts, w, h = format_detections(raw, width=100, height=100)
-    assert len(results) == 1
-    assert results[0]["cell_type"] == "RBC"
-    assert results[0]["confidence"] == pytest.approx(0.9, abs=0.01)
+    names = {0: "RBC", 1: "WBC"}
+    boxes  = [[10, 10, 50, 50], [20, 20, 60, 60]]
+    cls    = [0, 1]
+    scores = [0.9, 0.2]   # second one is below the 0.5 threshold
+
+    detections, counts = format_detections(boxes, cls, scores, names)
+    assert len(detections) == 1
+    assert detections[0]["cell_type"] == "RBC"
+    assert detections[0]["confidence"] == pytest.approx(0.9, abs=0.01)
+    assert detections[0]["box"] == {"x": 10, "y": 10, "w": 40, "h": 40}
 
 
 def test_format_detections_returns_correct_counts():
-    """format_detections should count cells per type."""
-    import numpy as np
-    raw = {
-        "detection_boxes":   [np.array([[0.0, 0.0, 0.3, 0.3], [0.4, 0.4, 0.8, 0.8]])],
-        "detection_classes": [np.array([1.0, 1.0])],
-        "detection_scores":  [np.array([0.9, 0.8])],
-    }
-    _, counts, _, _ = format_detections(raw, width=100, height=100)
+    """format_detections should count cells per type across all CELL_TYPES."""
+    names = {0: "RBC"}
+    boxes  = [[0, 0, 30, 30], [40, 40, 80, 80]]
+    cls    = [0, 0]
+    scores = [0.9, 0.8]
+
+    _, counts = format_detections(boxes, cls, scores, names)
     assert counts["RBC"] == 2
     assert counts["WBC"] == 0
     assert counts["Platelet"] == 0
+
+
+def test_format_detections_normalizes_platelets_label():
+    """The BCCD 'Platelets' class name should fold to canonical 'Platelet'."""
+    names = {0: "Platelets"}
+    detections, counts = format_detections([[0, 0, 5, 5]], [0], [0.99], names)
+    assert detections[0]["cell_type"] == "Platelet"
+    assert counts["Platelet"] == 1
+
+
+def test_format_detections_ignores_unknown_classes():
+    """Classes with no canonical mapping (e.g. COCO 'person') are dropped."""
+    names = {0: "person", 1: "car"}
+    detections, counts = format_detections(
+        [[0, 0, 5, 5], [6, 6, 9, 9]], [0, 1], [0.99, 0.99], names
+    )
+    assert detections == []
+    assert counts == {"RBC": 0, "WBC": 0, "Platelet": 0}

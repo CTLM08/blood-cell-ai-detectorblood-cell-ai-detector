@@ -5,14 +5,11 @@ __pycache__/
 venv/
 /.env
 
-# TensorFlow
-model/training/
-model/exported_model/
-model/pre-trained-model/
-tf_models/
+# Model artifacts (YOLO)
+model/runs/
+model/weights/
+yolov8*.pt
 *.ckpt
-*.index
-*.data-*
 
 # Dataset
 model/data/

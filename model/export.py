@@ -1,30 +1,30 @@
 """
-Export the latest training checkpoint to a SavedModel.
+Copy the newest trained YOLO checkpoint to model/weights/best.pt,
+which is the path the FastAPI backend loads for inference.
 Run after training: python -m model.export
-Exported model saved to model/exported_model/
 """
-import subprocess
-import sys
+import glob
 import os
-from model.config import TRAINING_DIR, EXPORTED_DIR, PIPELINE_CONFIG
+import shutil
+from model.config import RUNS_DIR, WEIGHTS_DIR, WEIGHTS_PATH
 
-EXPORT_SCRIPT = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "tf_models", "research", "object_detection", "exporter_main_v2.py"
-)
+
+def find_latest_best() -> str:
+    """Return the most recently modified best.pt under the runs directory."""
+    matches = glob.glob(os.path.join(RUNS_DIR, "**", "best.pt"), recursive=True)
+    if not matches:
+        raise FileNotFoundError(
+            f"No best.pt found under {RUNS_DIR}. Run `python -m model.train` first."
+        )
+    return max(matches, key=os.path.getmtime)
+
 
 def export():
-    os.makedirs(EXPORTED_DIR, exist_ok=True)
-    cmd = [
-        sys.executable, EXPORT_SCRIPT,
-        "--input_type=image_tensor",
-        f"--pipeline_config_path={PIPELINE_CONFIG}",
-        f"--trained_checkpoint_dir={TRAINING_DIR}",
-        f"--output_directory={EXPORTED_DIR}",
-    ]
-    print("Exporting model...")
-    subprocess.run(cmd, check=True)
-    print(f"Model exported to: {EXPORTED_DIR}")
+    os.makedirs(WEIGHTS_DIR, exist_ok=True)
+    best = find_latest_best()
+    shutil.copy2(best, WEIGHTS_PATH)
+    print(f"Exported {best}\n      -> {WEIGHTS_PATH}")
+
 
 if __name__ == "__main__":
     export()
