@@ -1,6 +1,4 @@
 """Inference utility — loads the trained YOLO model and runs detection."""
-import numpy as np
-from PIL import Image
 from ultralytics import YOLO
 from model.config import WEIGHTS_PATH, CELL_TYPES, CONFIDENCE_THRESHOLD, canonical_cell_type
 
@@ -9,17 +7,6 @@ def load_model(model_path: str = None):
     """Load a YOLO model from disk (a .pt file). Returns the YOLO instance."""
     path = model_path or WEIGHTS_PATH
     return YOLO(path)
-
-
-def preprocess_image(image_path: str):
-    """
-    Load an image file as an RGB uint8 array.
-    Returns: (image_array, original_width, original_height)
-    """
-    image = Image.open(image_path).convert("RGB")
-    width, height = image.size
-    image_np = np.array(image, dtype=np.uint8)
-    return image_np, width, height
 
 
 def format_detections(boxes_xyxy, class_ids, scores, names,
@@ -68,10 +55,14 @@ def predict(model, image_path: str) -> dict:
     """
     Run full inference on an image file.
     Returns the formatted response dict ready for the API.
+
+    The image path is passed straight to YOLO so Ultralytics loads it in the
+    BGR channel order the model was trained on. (Feeding a PIL/RGB array here
+    silently swaps the R and B channels and wrecks predictions.)
     """
-    image_np, width, height = preprocess_image(image_path)
-    results = model(image_np, verbose=False)
+    results = model(image_path, verbose=False)
     result = results[0]
+    height, width = result.orig_shape   # original image (h, w)
     boxes = result.boxes
 
     if boxes is None or len(boxes) == 0:

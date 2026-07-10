@@ -1,20 +1,5 @@
-import numpy as np
 import pytest
-from model.predict import preprocess_image, format_detections
-
-
-def test_preprocess_image_returns_rgb_array(tmp_path):
-    """preprocess_image should return an (H, W, 3) uint8 array + dimensions."""
-    from PIL import Image
-    img = Image.fromarray(np.zeros((100, 120, 3), dtype=np.uint8))
-    img_path = str(tmp_path / "test.jpg")
-    img.save(img_path)
-
-    array, width, height = preprocess_image(img_path)
-    assert array.shape == (100, 120, 3)
-    assert array.dtype == np.uint8
-    assert width == 120
-    assert height == 100
+from model.predict import format_detections
 
 
 def test_format_detections_filters_low_confidence():
