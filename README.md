@@ -4,7 +4,7 @@ A high school biology × AI project.
 Detects and labels **RBC**, **WBC**, and **Platelets** in blood cell microscope images.
 
 ## Stack
-- AI Model: TensorFlow + SSD MobileNet V2 (TF Object Detection API)
+- AI Model: Ultralytics YOLOv8 (fine-tuned on BCCD)
 - Backend: FastAPI (Python)
 - Frontend: React.js (Vite) + HTML5 Canvas
 
@@ -47,23 +47,33 @@ pytest backend/tests/ model/tests/ -v
 All backend and model unit tests mock the model, so they pass without
 trained weights.
 
-## Model status (what's left to make detection live)
+## Training the model
 
-The application code, API, and UI are complete and tested. The one remaining
-piece is the **trained model weights**, which require steps that need your
-own resources:
+The detector is Ultralytics YOLOv8, which runs on this Python 3.13 venv.
+To (re)train from scratch:
 
-1. A **Roboflow API key** (free) to download the BCCD dataset:
-   `python -m model.dataset YOUR_ROBOFLOW_API_KEY`
-2. The **TF Object Detection API** installed, plus the SSD MobileNet V2
-   pre-trained checkpoint (see the plan in
-   `../docs/superpowers/plans/2026-05-27-blood-cell-detector.md`, Tasks 3 & 6).
-3. Training + export: `python -m model.train` then `python -m model.export`,
-   which produces `model/exported_model/saved_model/`.
+1. **Download the BCCD dataset** (needs a free Roboflow API key):
+   ```powershell
+   python -m model.dataset YOUR_ROBOFLOW_API_KEY
+   ```
+   Downloads to `model/data/` in YOLOv8 format.
 
-> ⚠️ **Environment note:** this venv currently has **TensorFlow 2.21 on
-> Python 3.13**. The TF Object Detection API (the legacy training pipeline
-> above) is only known to install cleanly on **TF 2.10–2.13 / Python ≤3.10**.
-> To train as designed, create a separate Python 3.10 venv with
-> `tensorflow==2.10.0`. The runtime inference code in `model/predict.py`
-> works on the installed TF 2.21 — only the training toolchain is version-sensitive.
+2. **Train** (fine-tunes `yolov8n`; optional epoch count, default 50):
+   ```powershell
+   python -m model.train 50
+   ```
+   Outputs go to `model/runs/`. Fast on a GPU; on CPU expect ~2–3 min/epoch.
+   BCCD is easy — even a handful of epochs reaches ~0.88 mAP@50.
+
+3. **Export** the best checkpoint to the path the backend loads:
+   ```powershell
+   python -m model.export        # -> model/weights/best.pt
+   ```
+
+Once `model/weights/best.pt` exists, the backend `/predict` endpoint returns
+real detections. The model weights, dataset, and training runs are gitignored.
+
+> **Why YOLO instead of TensorFlow?** The original plan used the TensorFlow
+> Object Detection API, which only installs on TF 2.10–2.13 / Python ≤3.10.
+> This venv has TF 2.21 / Python 3.13, so the model layer was migrated to
+> Ultralytics YOLOv8. The API contract and frontend are identical either way.
