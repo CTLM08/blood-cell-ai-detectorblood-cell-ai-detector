@@ -1,15 +1,19 @@
 """
 Fine-tune a YOLOv8 detector on the BCCD dataset.
-Run: python -m model.train [epochs]
-Training outputs go to model/runs/. After training, run:
+Run: python -m model.train [epochs] [base_model] [imgsz]
+  e.g. python -m model.train 70 yolov8s.pt 640
+
+Training outputs go to model/runs/<name>/. After training, run:
     python -m model.export
 to copy the best weights to model/weights/best.pt (loaded by the backend).
 
 Training is fast on a GPU (a few minutes) and works on CPU too (slower).
+Larger base models (yolov8s > yolov8n) are more accurate but slower to train.
 """
 import glob
 import os
 import sys
+from pathlib import Path
 import yaml
 from ultralytics import YOLO
 from model.config import DATA_DIR, RUNS_DIR
@@ -59,23 +63,27 @@ def normalize_paths(data_yaml: str) -> str:
     return data_yaml
 
 
-def train(epochs: int = DEFAULT_EPOCHS):
+def train(epochs: int = DEFAULT_EPOCHS, base_model: str = BASE_MODEL, imgsz: int = IMG_SIZE):
     os.makedirs(RUNS_DIR, exist_ok=True)
     data_yaml = normalize_paths(find_data_yaml())
+    run_name = f"bccd_{Path(base_model).stem}"   # e.g. bccd_yolov8s
     print(f"Using dataset config: {data_yaml}")
+    print(f"Base model: {base_model} | epochs: {epochs} | imgsz: {imgsz} | run: {run_name}")
 
-    model = YOLO(BASE_MODEL)
+    model = YOLO(base_model)
     model.train(
         data=data_yaml,
         epochs=epochs,
-        imgsz=IMG_SIZE,
+        imgsz=imgsz,
         project=RUNS_DIR,
-        name="bccd",
+        name=run_name,
         exist_ok=True,
     )
-    print(f"Training complete. Runs saved under: {RUNS_DIR}")
+    print(f"Training complete. Runs saved under: {os.path.join(RUNS_DIR, run_name)}")
 
 
 if __name__ == "__main__":
     epochs = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_EPOCHS
-    train(epochs)
+    base   = sys.argv[2] if len(sys.argv) > 2 else BASE_MODEL
+    imgsz  = int(sys.argv[3]) if len(sys.argv) > 3 else IMG_SIZE
+    train(epochs, base, imgsz)

@@ -12,7 +12,10 @@ CELL_COLOURS = {
     "Platelet": {"hex": "#FFD700", "rgb": (255, 215, 0)},
 }
 
-CONFIDENCE_THRESHOLD = 0.5   # detections below this score are ignored
+CONFIDENCE_THRESHOLD = 0.4   # detections below this score are ignored
+# 0.4 leans slightly toward recall for dense RBCs vs the old 0.5, without the
+# false-positive flood seen at 0.3. Real accuracy gains need a stronger model
+# (see model/train.py — yolov8s), since the nano model's mAP is the true limit.
 
 # Maps a raw class name (as trained, e.g. the BCCD "Platelets" label) → our
 # canonical cell type. Case-insensitive. Unknown names return None and are
