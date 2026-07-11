@@ -5,10 +5,12 @@ import ImageCanvas       from "./components/ImageCanvas/ImageCanvas";
 import DetectionResults  from "./components/DetectionResults/DetectionResults";
 import CellLegend        from "./components/CellLegend/CellLegend";
 import LoadingSpinner    from "./components/LoadingSpinner/LoadingSpinner";
+import VideoTracker      from "./components/VideoTracker/VideoTracker";
 import { detectCells }   from "./services/api";
 import "./App.css";
 
 export default function App() {
+  const [mode,        setMode]        = useState("image");   // "image" | "video"
   const [imageFile,   setImageFile]   = useState(null);
   const [detections,  setDetections]  = useState([]);
   const [cellCounts,  setCellCounts]  = useState({});
@@ -69,7 +71,30 @@ export default function App() {
         </a>
       </header>
 
+      <div className="mode-tabs">
+        <button
+          className={`mode-tab ${mode === "image" ? "on" : ""}`}
+          onClick={() => setMode("image")}
+        >
+          <Icon icon="lucide:image" width="16" height="16" />
+          Image
+        </button>
+        <button
+          className={`mode-tab ${mode === "video" ? "on" : ""}`}
+          onClick={() => setMode("video")}
+        >
+          <Icon icon="lucide:scan-eye" width="16" height="16" />
+          Video tracking
+        </button>
+      </div>
+
+      {mode === "video" ? (
+        <main className="app-main">
+          <VideoTracker />
+        </main>
+      ) : (
       <main className="app-main">
+        <div className="layout">
         <section className="left-panel">
           {!imageFile ? (
             <UploadPanel onFileSelect={handleFileSelect} />
@@ -120,7 +145,9 @@ export default function App() {
           )}
           {isLoading && imageFile && <LoadingSpinner />}
         </aside>
+        </div>
       </main>
+      )}
 
       <footer className="app-footer">
         <span>YOLOv8 · FastAPI · React</span>

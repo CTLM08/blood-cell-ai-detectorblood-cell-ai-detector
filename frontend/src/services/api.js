@@ -1,6 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 /**
+ * WebSocket URL for the live cell-tracking endpoint.
+ * Derived from the API base by swapping the http(s) scheme for ws(s).
+ * @returns {string}
+ */
+export function trackSocketUrl() {
+  return API_BASE.replace(/^http/, "ws") + "/ws/track";
+}
+
+/**
  * Send an image file to the backend for cell detection.
  * @param {File} file - the image File object from an <input> or drop event
  * @returns {Promise<object>} - { image_width, image_height, detections, cell_counts }

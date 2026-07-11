@@ -1,4 +1,6 @@
 ultralytics==8.4.91
+lapx==0.9.4
+opencv-python
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6

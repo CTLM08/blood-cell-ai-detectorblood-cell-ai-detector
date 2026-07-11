@@ -5,15 +5,22 @@ import "./DetectionResults.css";
  * Props:
  *   cellCounts  {object}  — { RBC: 12, WBC: 3, Platelet: 7 }
  *   totalCells  {number}  — total detections
+ *   title       {string}  — section heading
+ *   caption     {string}  — caption after the headline number
  */
-export default function DetectionResults({ cellCounts = {}, totalCells = 0 }) {
+export default function DetectionResults({
+  cellCounts = {},
+  totalCells = 0,
+  title = "Detection summary",
+  caption = "cells detected",
+}) {
   return (
     <div className="card detection-results">
-      <h3 className="card-label">Detection summary</h3>
+      <h3 className="card-label">{title}</h3>
 
       <div className="results-total">
         <span className="results-total-num">{totalCells}</span>
-        <span className="results-total-cap">cells detected</span>
+        <span className="results-total-cap">{caption}</span>
       </div>
 
       <ul className="results-list">

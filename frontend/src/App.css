@@ -65,13 +65,46 @@
   background: var(--surface);
 }
 
+/* ── Mode tabs ──────────────────────────────────────────────────────────── */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 4px 0;
+}
+
+.mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 8px 6px 12px;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.mode-tab.on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.mode-tab:hover { color: var(--text); }
+
 /* ── Main layout ────────────────────────────────────────────────────────── */
 .app-main {
+  padding: 22px 4px;
+  flex: 1;
+}
+
+.layout {
   display: grid;
   grid-template-columns: 1fr 300px;
   gap: 24px;
-  padding: 28px 4px;
-  flex: 1;
   align-items: start;
 }
 
@@ -170,7 +203,7 @@
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 760px) {
   .app { padding: 0 16px; }
-  .app-main {
+  .layout {
     grid-template-columns: 1fr;
     gap: 18px;
   }

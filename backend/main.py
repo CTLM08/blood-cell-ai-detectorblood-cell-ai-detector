@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routes import health, cells, predict
+from backend.routes import health, cells, predict, track
 
 app = FastAPI(
     title="Blood Cell AI Detector",
@@ -19,3 +19,4 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(cells.router)
 app.include_router(predict.router)
+app.include_router(track.router)
