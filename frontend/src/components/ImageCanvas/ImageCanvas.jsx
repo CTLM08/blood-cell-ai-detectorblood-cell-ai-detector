@@ -14,7 +14,6 @@ export default function ImageCanvas({ imageFile, detections = [] }) {
   const canvasRef = useRef(null);
   const [imageUrl, setImageUrl] = useState(null);
 
-  // Create an object URL for the file and revoke it when the file changes / unmounts.
   useEffect(() => {
     if (!imageFile) {
       setImageUrl(null);
@@ -25,11 +24,19 @@ export default function ImageCanvas({ imageFile, detections = [] }) {
     return () => URL.revokeObjectURL(url);
   }, [imageFile]);
 
-  // Draw boxes whenever detections or the image change (once the image has loaded).
   useEffect(() => {
     drawOverlay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detections, imageUrl]);
+
+  function roundRect(ctx, x, y, w, h, r) {
+    if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); return; }
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y,     x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x,     y + h, r);
+    ctx.arcTo(x,     y + h, x,     y,     r);
+    ctx.arcTo(x,     y,     x + w, y,     r);
+  }
 
   function drawOverlay() {
     const img    = imgRef.current;
@@ -41,30 +48,41 @@ export default function ImageCanvas({ imageFile, detections = [] }) {
     canvas.height = img.naturalHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const scale    = canvas.width / 640;          // normalise to a 640px reference
+    const lineW    = Math.max(1.5, 2 * scale);
+    const fontSize = Math.max(11, 13 * scale);
+    const radius   = Math.max(3, 5 * scale);
+
     detections.forEach(({ cell_type, confidence, box }) => {
       const colour = CELL_TYPES[cell_type]?.colour ?? "#ffffff";
       const { x, y, w, h } = box;
 
-      // Bounding box rectangle
+      // bounding box — rounded, thin
+      ctx.lineWidth   = lineW;
       ctx.strokeStyle = colour;
-      ctx.lineWidth   = Math.max(2, canvas.width / 200);
-      ctx.strokeRect(x, y, w, h);
+      ctx.beginPath();
+      roundRect(ctx, x, y, w, h, radius);
+      ctx.stroke();
 
-      // Label background
-      const label    = `${cell_type} ${(confidence * 100).toFixed(0)}%`;
-      const fontSize = Math.max(11, canvas.width / 50);
-      ctx.font       = `bold ${fontSize}px 'Segoe UI', sans-serif`;
-      const textW    = ctx.measureText(label).width;
-      const padX = 5, padY = 4;
-      const labelH = fontSize + padY * 2;
-      const labelY = y > labelH ? y - labelH : y + h;
+      // label pill
+      const label = `${cell_type}  ${(confidence * 100).toFixed(0)}%`;
+      ctx.font = `600 ${fontSize}px ${getComputedStyle(document.body).fontFamily}`;
+      const padX = 7 * scale;
+      const padY = 4 * scale;
+      const textW  = ctx.measureText(label).width;
+      const pillW  = textW + padX * 2;
+      const pillH  = fontSize + padY * 2;
+      const pillX  = x - lineW / 2;
+      const pillY  = y > pillH + 2 ? y - pillH - 2 * scale : y + h + 2 * scale;
 
       ctx.fillStyle = colour;
-      ctx.fillRect(x - 1, labelY, textW + padX * 2, labelH);
+      ctx.beginPath();
+      roundRect(ctx, pillX, pillY, pillW, pillH, radius);
+      ctx.fill();
 
-      // Label text
-      ctx.fillStyle = "#000000";
-      ctx.fillText(label, x + padX - 1, labelY + fontSize);
+      ctx.fillStyle = "#ffffff";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, pillX + padX, pillY + pillH / 2 + 0.5 * scale);
     });
   }
 

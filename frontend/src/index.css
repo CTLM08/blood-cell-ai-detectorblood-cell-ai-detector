@@ -1,7 +1,76 @@
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+  /* Light theme (default) */
+  --bg:            #f6f7f9;
+  --bg-grid:       rgba(15, 23, 42, 0.035);
+  --surface:       #ffffff;
+  --surface-2:     #fbfbfd;
+  --border:        #e8e9ee;
+  --border-strong: #d7d9e0;
+  --text:          #14151a;
+  --text-muted:    #6b7280;
+  --text-faint:    #9aa0ac;
+  --accent:        #4f46e5;
+  --accent-weak:   rgba(79, 70, 229, 0.08);
+  --accent-text:   #ffffff;
+
+  --radius-sm: 8px;
+  --radius:    12px;
+  --radius-lg: 18px;
+
+  --shadow-sm: 0 1px 2px rgba(16, 18, 27, 0.04), 0 1px 3px rgba(16, 18, 27, 0.06);
+  --shadow-md: 0 4px 12px rgba(16, 18, 27, 0.06), 0 12px 32px rgba(16, 18, 27, 0.06);
+
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:            #0a0b0e;
+    --bg-grid:       rgba(255, 255, 255, 0.028);
+    --surface:       #141519;
+    --surface-2:     #101115;
+    --border:        #24262d;
+    --border-strong: #313440;
+    --text:          #f2f3f5;
+    --text-muted:    #9ca3af;
+    --text-faint:    #6b7280;
+    --accent:        #818cf8;
+    --accent-weak:   rgba(129, 140, 248, 0.12);
+    --accent-text:   #0a0b0e;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.45);
+
+    color-scheme: dark;
+  }
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   margin: 0;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #0f1117;
-  color: #e8eaf6;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background-color: var(--bg);
+  /* subtle dotted grid for an engineered, minimal backdrop */
+  background-image: radial-gradient(var(--bg-grid) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
 }
+
+h1, h2, h3, p { margin: 0; }
+
+button { font-family: inherit; }
+
+::selection { background: var(--accent-weak); }

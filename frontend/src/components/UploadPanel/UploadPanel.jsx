@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Icon } from "@iconify/react";
 import "./UploadPanel.css";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/bmp"];
@@ -43,10 +44,17 @@ export default function UploadPanel({ onFileSelect }) {
         style={{ display: "none" }}
         onChange={(e) => handleFile(e.target.files[0])}
       />
-      <div className="upload-icon">🔬</div>
-      <p className="upload-title">Drop a blood cell image here</p>
-      <p className="upload-subtitle">or click to browse — JPEG / PNG</p>
-      {error && <p className="upload-error">{error}</p>}
+      <span className="upload-icon">
+        <Icon icon="lucide:image-up" width="26" height="26" />
+      </span>
+      <p className="upload-title">Drop a blood cell image</p>
+      <p className="upload-subtitle">or click to browse — JPEG, PNG</p>
+      {error && (
+        <p className="upload-error">
+          <Icon icon="lucide:triangle-alert" width="14" height="14" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

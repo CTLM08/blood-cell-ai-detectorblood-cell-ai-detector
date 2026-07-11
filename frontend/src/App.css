@@ -1,31 +1,76 @@
 .app {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 24px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+/* ── Header ─────────────────────────────────────────────────────────────── */
 .app-header {
-  padding: 24px 32px 16px;
-  border-bottom: 1px solid #1e2240;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 4px 20px;
+  border-bottom: 1px solid var(--border);
 }
 
-.app-title {
-  margin: 0 0 4px;
-  font-size: 1.6rem;
-  font-weight: 700;
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.app-subtitle {
-  margin: 0;
-  color: #a0a8c0;
-  font-size: 0.95rem;
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
 }
 
+.brand-title {
+  font-size: 1.02rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.header-link:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface);
+}
+
+/* ── Main layout ────────────────────────────────────────────────────────── */
 .app-main {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 300px;
   gap: 24px;
-  padding: 24px 32px;
+  padding: 28px 4px;
   flex: 1;
   align-items: start;
 }
@@ -34,6 +79,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .right-panel {
@@ -44,43 +90,89 @@
   top: 24px;
 }
 
+/* ── Image section ──────────────────────────────────────────────────────── */
 .image-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  align-items: flex-start;
+  gap: 14px;
 }
 
-.reset-btn {
-  background: none;
-  border: 1px solid #2a2d3e;
-  border-radius: 8px;
-  color: #a0a8c0;
-  padding: 8px 16px;
+.image-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.image-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.image-status .ok { color: #22a565; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
-.reset-btn:hover {
-  border-color: #7c83fd;
-  color: #7c83fd;
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ── Error banner ───────────────────────────────────────────────────────── */
 .error-banner {
-  background: #2d1a1a;
-  border: 1px solid #ff4444;
-  border-radius: 8px;
-  padding: 12px 16px;
-  color: #ff6b6b;
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, #ef4444 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, #ef4444 28%, var(--border));
+  border-radius: var(--radius);
+  padding: 13px 16px;
+  color: #dc2626;
+  font-size: 0.88rem;
 }
 
-/* Responsive: stack on small screens */
-@media (max-width: 720px) {
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.app-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 4px 24px;
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 0.78rem;
+}
+
+.app-footer .dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .app { padding: 0 16px; }
   .app-main {
     grid-template-columns: 1fr;
-    padding: 16px;
+    gap: 18px;
   }
   .right-panel { position: static; }
 }

@@ -1,19 +1,21 @@
 // Cell type definitions — add new entries here to extend in Phase 2.
+// Colours are used both for the legend and the canvas bounding boxes,
+// chosen as three distinct hues that read clearly over stained smears.
 export const CELL_TYPES = {
   RBC: {
     label:  "Red Blood Cell",
     short:  "RBC",
-    colour: "#FF4444",
+    colour: "#f43f5e",   // rose
   },
   WBC: {
     label:  "White Blood Cell",
     short:  "WBC",
-    colour: "#44FF44",
+    colour: "#10b981",   // emerald
   },
   Platelet: {
     label:  "Platelet",
     short:  "Platelet",
-    colour: "#FFD700",
+    colour: "#f59e0b",   // amber
   },
 };
 
