@@ -77,3 +77,18 @@ real detections. The model weights, dataset, and training runs are gitignored.
 > Object Detection API, which only installs on TF 2.10–2.13 / Python ≤3.10.
 > This venv has TF 2.21 / Python 3.13, so the model layer was migrated to
 > Ultralytics YOLOv8. The API contract and frontend are identical either way.
+
+### Accuracy notes
+
+- Served model: **yolov8n**, 40 epochs, imgsz 640 (test mAP50 ≈ 0.89).
+  Per class: WBC is excellent (mAP50 ≈ 0.97); RBC recall and Platelets are the
+  weaker points, mostly on dense, overlapping smears.
+- `CONFIDENCE_THRESHOLD` is 0.4 (in `model/config.py`). Lower catches more dense
+  RBCs but adds false positives; higher is cleaner but misses more.
+- **Tried and rejected:** retraining **yolov8s** (70 epochs) did *not* improve
+  overall accuracy — mAP was flat/slightly lower and it was worse on dense
+  images (higher recall globally but more false positives, worse dense-cluster
+  detection). The bottleneck is the small BCCD dataset, not model capacity.
+  `train.py` still supports `python -m model.train <epochs> <base_model> <imgsz>`
+  if you want to experiment. The real lever for better accuracy is **more
+  annotated training data**.
