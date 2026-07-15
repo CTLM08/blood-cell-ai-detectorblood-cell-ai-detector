@@ -23,12 +23,13 @@ IMG_SIZE = 640
 BASE_MODEL = "yolov8n.pt"   # nano — auto-downloads (~6 MB) on first run
 
 
-def find_data_yaml() -> str:
-    """Locate the Roboflow data.yaml anywhere under the data directory."""
-    matches = glob.glob(os.path.join(DATA_DIR, "**", "data.yaml"), recursive=True)
+def find_data_yaml(base_dir: str = None) -> str:
+    """Locate the Roboflow data.yaml anywhere under the given data directory."""
+    base = base_dir or DATA_DIR
+    matches = glob.glob(os.path.join(base, "**", "data.yaml"), recursive=True)
     if not matches:
         raise FileNotFoundError(
-            f"No data.yaml found under {DATA_DIR}. "
+            f"No data.yaml found under {base}. "
             f"Run `python -m model.dataset YOUR_ROBOFLOW_API_KEY` first."
         )
     return matches[0]
@@ -63,10 +64,11 @@ def normalize_paths(data_yaml: str) -> str:
     return data_yaml
 
 
-def train(epochs: int = DEFAULT_EPOCHS, base_model: str = BASE_MODEL, imgsz: int = IMG_SIZE):
+def train(epochs: int = DEFAULT_EPOCHS, base_model: str = BASE_MODEL, imgsz: int = IMG_SIZE,
+          data_dir: str = None, run_name: str = None):
     os.makedirs(RUNS_DIR, exist_ok=True)
-    data_yaml = normalize_paths(find_data_yaml())
-    run_name = f"bccd_{Path(base_model).stem}"   # e.g. bccd_yolov8s
+    data_yaml = normalize_paths(find_data_yaml(data_dir))
+    run_name = run_name or f"bccd_{Path(base_model).stem}"   # e.g. bccd_yolov8s
     print(f"Using dataset config: {data_yaml}")
     print(f"Base model: {base_model} | epochs: {epochs} | imgsz: {imgsz} | run: {run_name}")
 
@@ -86,4 +88,6 @@ if __name__ == "__main__":
     epochs = int(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_EPOCHS
     base   = sys.argv[2] if len(sys.argv) > 2 else BASE_MODEL
     imgsz  = int(sys.argv[3]) if len(sys.argv) > 3 else IMG_SIZE
-    train(epochs, base, imgsz)
+    ddir   = sys.argv[4] if len(sys.argv) > 4 else None
+    rname  = sys.argv[5] if len(sys.argv) > 5 else None
+    train(epochs, base, imgsz, ddir, rname)

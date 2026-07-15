@@ -21,6 +21,7 @@ import glob
 import os
 import random
 import shutil
+import sys
 import cv2
 from model.config import DATA_DIR
 
@@ -29,10 +30,11 @@ VID_SUFFIX  = "_augvid"
 SEED = 0
 
 
-def _train_dirs():
-    matches = glob.glob(os.path.join(DATA_DIR, "**", "train", "images"), recursive=True)
+def _train_dirs(base_dir=None):
+    base = base_dir or DATA_DIR
+    matches = glob.glob(os.path.join(base, "**", "train", "images"), recursive=True)
     if not matches:
-        raise FileNotFoundError(f"No train/images folder found under {DATA_DIR}")
+        raise FileNotFoundError(f"No train/images folder found under {base}")
     images_dir = matches[0]
     labels_dir = os.path.join(os.path.dirname(images_dir), "labels")
     return images_dir, labels_dir
@@ -74,9 +76,9 @@ def _write(variant_img, src_stem, ext, suffix, images_dir, labels_dir):
     return True
 
 
-def augment():
+def augment(base_dir=None):
     random.seed(SEED)
-    images_dir, labels_dir = _train_dirs()
+    images_dir, labels_dir = _train_dirs(base_dir)
     originals = [
         p for p in glob.glob(os.path.join(images_dir, "*.jpg"))
         if GRAY_SUFFIX not in p and VID_SUFFIX not in p
@@ -98,4 +100,5 @@ def augment():
 
 
 if __name__ == "__main__":
-    augment()
+    # optional: python -m model.augment <dataset_dir>
+    augment(sys.argv[1] if len(sys.argv) > 1 else None)

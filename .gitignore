@@ -16,6 +16,7 @@ demo/
 
 # Dataset
 model/data/
+model/data_v2/
 
 # Node
 frontend/node_modules/
