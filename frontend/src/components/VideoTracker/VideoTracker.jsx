@@ -6,7 +6,9 @@ import CellLegend from "../CellLegend/CellLegend";
 import DetectionResults from "../DetectionResults/DetectionResults";
 import "./VideoTracker.css";
 
-const TARGET_W = 480;        // frames are downscaled to this width before sending
+const TARGET_W = 800;        // frames are downscaled to this width before sending
+// 800 (not 480): microscope footage packs many small cells into a frame, and at
+// 480 they shrink below what the detector can resolve. Costs some fps on CPU.
 const TRAIL_LEN = 16;        // points kept per motion trail
 const JPEG_QUALITY = 0.6;
 
