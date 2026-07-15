@@ -78,6 +78,25 @@ real detections. The model weights, dataset, and training runs are gitignored.
 > This venv has TF 2.21 / Python 3.13, so the model layer was migrated to
 > Ultralytics YOLOv8. The API contract and frontend are identical either way.
 
+### Demo video
+
+The detector is trained on **stained blood smears**, so demo it with that kind
+of footage. To generate a stained-smear video from the BCCD test images
+(a viewport pans across each smear, like moving a slide under a microscope —
+cells drift, so the tracker assigns persistent IDs and accumulates unique counts):
+
+```powershell
+python -m model.demo_video 8 4        # 8 smears, 4s each -> demo/stained_smear_demo.mp4
+```
+Then upload it in the app's **Video tracking** tab.
+
+> **Scope limit:** the model only understands *stained smears*. Unstained
+> **brightfield** microscope footage is a different imaging modality (pale
+> transparent "ring" cells instead of stained filled cells) and the model
+> detects very little there. Fixing that needs labelled brightfield training
+> data, which is not publicly available and cannot be auto-labelled reliably
+> (circle detection finds ~3 of 25 cells). See "Future work".
+
 ### Accuracy notes
 
 - Served model: **yolov8n**, 40 epochs, imgsz 640 (test mAP50 ≈ 0.89).

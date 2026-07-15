@@ -11,6 +11,9 @@ model/weights/
 yolov8*.pt
 *.ckpt
 
+# Generated demo media
+demo/
+
 # Dataset
 model/data/
 
