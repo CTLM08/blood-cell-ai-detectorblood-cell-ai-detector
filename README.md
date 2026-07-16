@@ -99,9 +99,11 @@ Then upload it in the app's **Video tracking** tab.
 
 ### Accuracy notes
 
-- Served model: **yolov8n**, 40 epochs, imgsz 640 (test mAP50 ≈ 0.89).
-  Per class: WBC is excellent (mAP50 ≈ 0.97); RBC recall and Platelets are the
-  weaker points, mostly on dense, overlapping smears.
+- Served model: **yolov8n**, fine-tuned on a combined blood-cell dataset
+  (~1,100 stained-smear images at 640px, incl. high-zoom sources) plus
+  grayscale + video-like scene augmentation. Test mAP50 ≈ 0.93.
+- Trained via: augment the dataset (`python -m model.augment <dir>`), then
+  fine-tune (`python -m model.train <epochs> <base.pt> 640 <dir> <run_name>`).
 - `CONFIDENCE_THRESHOLD` is 0.4 (in `model/config.py`). Lower catches more dense
   RBCs but adds false positives; higher is cleaner but misses more.
 - **Tried and rejected:** retraining **yolov8s** (70 epochs) did *not* improve
