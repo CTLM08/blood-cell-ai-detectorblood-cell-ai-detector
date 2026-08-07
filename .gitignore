@@ -7,9 +7,13 @@ venv/
 
 # Model artifacts (YOLO)
 model/runs/
-model/weights/
+model/weights/*
+!model/weights/best.pt      # keep the served model so the app runs on clone
 yolov8*.pt
 *.ckpt
+
+# Local env (use .env.example as a template)
+frontend/.env
 
 # Generated demo media
 demo/
@@ -25,3 +29,7 @@ frontend/dist/
 # IDE
 .vscode/
 .idea/
+
+# Generated doc exports
+*.html
+*.pdf

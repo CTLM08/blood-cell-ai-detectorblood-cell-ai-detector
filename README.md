@@ -1,115 +1,148 @@
 # 🔬 Blood Cell AI Detector
 
-A high school biology × AI project.
-Detects and labels **RBC**, **WBC**, and **Platelets** in blood cell microscope images.
+Detect and count **red blood cells (RBC)**, **white blood cells (WBC)**, and
+**platelets** in microscope blood-smear images — and track them across video
+frames. A high-school **biology × AI** project.
 
-## Stack
-- AI Model: Ultralytics YOLOv8 (fine-tuned on BCCD)
-- Backend: FastAPI (Python)
-- Frontend: React.js (Vite) + HTML5 Canvas
+- **AI model:** Ultralytics YOLOv8 (fine-tuned on stained blood smears, test mAP@0.5 ≈ 0.93)
+- **Backend:** FastAPI (Python) — REST API + a WebSocket for live video tracking
+- **Frontend:** React (Vite) with an HTML5-Canvas overlay
 
-## Project layout
-```
-model/     inference utility, training pipeline, cell config
-backend/   FastAPI app: /health, /cells, /predict
-frontend/  React UI: upload, canvas overlay, results table
-```
+---
 
-## Run
+## Features
 
-### Backend
-```powershell
+- 📷 **Image detection** — upload a smear image, get colour-coded bounding boxes and a per-type count.
+- 🎥 **Video tracking** — webcam or uploaded video; cells get persistent IDs so you count *unique* cells (not the same cell every frame), with motion trails.
+- ⚫ **Grayscale-robust** — works on black-and-white microscope images too.
+
+---
+
+## Quick start
+
+**Prerequisites:** Python 3.10+ and Node.js 18+. The trained model
+(`model/weights/best.pt`, ~6 MB) is included, so it works right after cloning.
+
+```bash
+git clone <your-repo-url>
 cd biology-ai-project
-.\venv\Scripts\Activate.ps1
-# from the project root so `model` and `backend` import as packages:
-uvicorn backend.main:app --reload --port 8000
 ```
-Open http://localhost:8000/docs for the interactive API.
-`/health` and `/cells` work immediately. `/predict` needs a trained model
-(see "Model status" below) — without it, the first `/predict` call errors
-while loading `model/exported_model/`.
 
-### Frontend
+### 1. Backend (FastAPI)
+
 ```powershell
+# create + activate a virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1          # Windows PowerShell
+# source venv/bin/activate           # macOS/Linux
+
+pip install -r backend/requirements.txt
+
+# run from the project root so `backend` and `model` import as packages
+$env:PYTHONPATH = (Get-Location).Path # PowerShell
+# export PYTHONPATH=$(pwd)            # macOS/Linux
+uvicorn backend.main:app --port 8000
+```
+
+Backend runs at **http://localhost:8000** (interactive API docs at `/docs`).
+
+### 2. Frontend (React)
+
+```bash
 cd frontend
+cp .env.example .env       # sets VITE_API_URL=http://localhost:8000
 npm install
 npm run dev
 ```
-Open http://localhost:5173.
 
-### Tests
-```powershell
-cd biology-ai-project
-.\venv\Scripts\Activate.ps1
-$env:PYTHONPATH = (Get-Location).Path
-pytest backend/tests/ model/tests/ -v
+Open **http://localhost:5173**.
+
+---
+
+## How to use the app
+
+Open http://localhost:5173 — there are two tabs:
+
+**Image**
+1. Drag a blood-smear image onto the upload panel (or click to browse).
+2. The AI draws boxes: **red = RBC, green = WBC, yellow = Platelet**, with a count table.
+
+**Video tracking**
+1. Choose **Webcam** or **Upload**, then press **Start**.
+2. Cells are tracked with a `#id` label and a motion trail; the panel shows the running **unique** count per type.
+3. No sample clip? Generate a stained-smear demo: `python -m model.demo_video 8 4` → upload `demo/stained_smear_demo.mp4`.
+
+---
+
+## API
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/health` | GET | Health check |
+| `/cells` | GET | Supported cell types + colours |
+| `/predict` | POST | Upload an image → detections + counts |
+| `/ws/track` | WebSocket | Stream frames → per-frame tracks + unique counts |
+
+---
+
+## Project structure
+
 ```
-All backend and model unit tests mock the model, so they pass without
-trained weights.
+biology-ai-project/
+├── model/            # YOLO inference, training, augmentation, cell config
+│   ├── predict.py    #   run detection on an image
+│   ├── tracker.py    #   ByteTrack tracking for video
+│   ├── train.py / augment.py / export.py / demo_video.py
+│   └── weights/best.pt   # the trained model (committed)
+├── backend/          # FastAPI app
+│   ├── main.py
+│   ├── routes/       #   /health, /cells, /predict, /ws/track
+│   ├── services/     #   detector singleton
+│   └── tests/        #   pytest (model is mocked, no weights needed)
+└── frontend/         # React + Vite UI
+    └── src/components/  UploadPanel, ImageCanvas, VideoTracker, ...
+```
 
-## Training the model
+Run the tests: `pytest backend/tests/ model/tests/ -v`
 
-The detector is Ultralytics YOLOv8, which runs on this Python 3.13 venv.
-To (re)train from scratch:
+---
 
-1. **Download the BCCD dataset** (needs a free Roboflow API key):
-   ```powershell
-   python -m model.dataset YOUR_ROBOFLOW_API_KEY
-   ```
-   Downloads to `model/data/` in YOLOv8 format.
+## Training your own model
 
-2. **Train** (fine-tunes `yolov8n`; optional epoch count, default 50):
-   ```powershell
-   python -m model.train 50
-   ```
-   Outputs go to `model/runs/`. Fast on a GPU; on CPU expect ~2–3 min/epoch.
-   BCCD is easy — even a handful of epochs reaches ~0.88 mAP@50.
-
-3. **Export** the best checkpoint to the path the backend loads:
-   ```powershell
-   python -m model.export        # -> model/weights/best.pt
-   ```
-
-Once `model/weights/best.pt` exists, the backend `/predict` endpoint returns
-real detections. The model weights, dataset, and training runs are gitignored.
-
-> **Why YOLO instead of TensorFlow?** The original plan used the TensorFlow
-> Object Detection API, which only installs on TF 2.10–2.13 / Python ≤3.10.
-> This venv has TF 2.21 / Python 3.13, so the model layer was migrated to
-> Ultralytics YOLOv8. The API contract and frontend are identical either way.
-
-### Demo video
-
-The detector is trained on **stained blood smears**, so demo it with that kind
-of footage. To generate a stained-smear video from the BCCD test images
-(a viewport pans across each smear, like moving a slide under a microscope —
-cells drift, so the tracker assigns persistent IDs and accumulates unique counts):
+The included model is fine-tuned on ~1,100 stained-smear images (with grayscale
++ video-style augmentation). To retrain:
 
 ```powershell
-python -m model.demo_video 8 4        # 8 smears, 4s each -> demo/stained_smear_demo.mp4
+# 1. Get a dataset (YOLO format). e.g. download BCCD via Roboflow (free API key):
+python -m model.dataset YOUR_ROBOFLOW_API_KEY
+
+# 2. (optional) add grayscale + video-like scene augmentation
+python -m model.augment model/data
+
+# 3. fine-tune, then export the best checkpoint to model/weights/best.pt
+python -m model.train 40 yolov8n.pt 640 model/data
+python -m model.export
 ```
-Then upload it in the app's **Video tracking** tab.
 
-> **Scope limit:** the model only understands *stained smears*. Unstained
-> **brightfield** microscope footage is a different imaging modality (pale
-> transparent "ring" cells instead of stained filled cells) and the model
-> detects very little there. Fixing that needs labelled brightfield training
-> data, which is not publicly available and cannot be auto-labelled reliably
-> (circle detection finds ~3 of 25 cells). See "Future work".
+> **Never commit your Roboflow API key.** Pass it only as a command-line
+> argument (as above); it is never written to a file.
 
-### Accuracy notes
+---
 
-- Served model: **yolov8n**, fine-tuned on a combined blood-cell dataset
-  (~1,100 stained-smear images at 640px, incl. high-zoom sources) plus
-  grayscale + video-like scene augmentation. Test mAP50 ≈ 0.93.
-- Trained via: augment the dataset (`python -m model.augment <dir>`), then
-  fine-tune (`python -m model.train <epochs> <base.pt> 640 <dir> <run_name>`).
-- `CONFIDENCE_THRESHOLD` is 0.4 (in `model/config.py`). Lower catches more dense
-  RBCs but adds false positives; higher is cleaner but misses more.
-- **Tried and rejected:** retraining **yolov8s** (70 epochs) did *not* improve
-  overall accuracy — mAP was flat/slightly lower and it was worse on dense
-  images (higher recall globally but more false positives, worse dense-cluster
-  detection). The bottleneck is the small BCCD dataset, not model capacity.
-  `train.py` still supports `python -m model.train <epochs> <base_model> <imgsz>`
-  if you want to experiment. The real lever for better accuracy is **more
-  annotated training data**.
+## Accuracy & limitations
+
+- **Test mAP@0.5 ≈ 0.93.** WBC detection is excellent; platelets (the rarest
+  class) are the weakest. `CONFIDENCE_THRESHOLD` in `model/config.py` (0.4)
+  trades recall vs. false positives.
+- **Domain scope:** the model is trained on **stained smears**. It also handles
+  grayscale and clearer video, but **unstained brightfield** microscopy (pale
+  "ring" cells) is a different imaging modality it detects poorly — fixing that
+  needs labelled brightfield training data. This is documented as future work.
+
+---
+
+## Tech notes / credits
+
+- Model: [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) · tracking via ByteTrack
+- Data: BCCD + community blood-cell datasets (stained peripheral smears)
+- Built as a biology × AI learning project.
