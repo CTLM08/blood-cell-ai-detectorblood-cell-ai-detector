@@ -141,6 +141,15 @@ python -m model.export
 
 ---
 
+## Authors
+
+Biology × AI group project:
+
+- 蔡陈礼詺
+- 刘锦廷
+- 吴文介
+- 荘展睿
+
 ## Tech notes / credits
 
 - Model: [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) · tracking via ByteTrack
