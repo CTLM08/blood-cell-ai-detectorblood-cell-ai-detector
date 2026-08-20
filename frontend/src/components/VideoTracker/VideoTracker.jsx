@@ -1,32 +1,28 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { CELL_TYPES } from "../../constants/cellTypes";
-import { trackSocketUrl } from "../../services/api";
+import { detect, loadDetector } from "../../services/detector";
+import { Tracker } from "../../services/tracker";
 import CellLegend from "../CellLegend/CellLegend";
 import DetectionResults from "../DetectionResults/DetectionResults";
 import "./VideoTracker.css";
 
-const TARGET_W = 800;        // frames are downscaled to this width before sending
-// 800 (not 480): microscope footage packs many small cells into a frame, and at
-// 480 they shrink below what the detector can resolve. Costs some fps on CPU.
-const TRAIL_LEN = 16;        // points kept per motion trail
-const JPEG_QUALITY = 0.6;
+const TRAIL_LEN = 16; // points kept per motion trail
 
 export default function VideoTracker() {
   const videoRef   = useRef(null);
-  const captureRef = useRef(null);   // hidden canvas used to grab frames
   const overlayRef = useRef(null);   // canvas drawn over the video
-  const wsRef      = useRef(null);
   const streamRef  = useRef(null);   // webcam MediaStream
   const objUrlRef  = useRef(null);   // uploaded-file object URL
   const rafRef     = useRef(null);
-  const inFlight   = useRef(false);  // backpressure: one frame in flight at a time
+  const inFlight   = useRef(false);  // backpressure: one inference at a time
   const trails     = useRef(new Map());
+  const trackerRef = useRef(new Tracker());
   const fileInput  = useRef(null);
 
   const [source, setSource]   = useState("webcam");   // "webcam" | "file"
   const [running, setRunning] = useState(false);
-  const [status, setStatus]   = useState("idle");     // idle|connecting|live|stopped|error
+  const [status, setStatus]   = useState("idle");     // idle|loading|live|stopped|error
   const [error, setError]     = useState(null);
   const [counts, setCounts]   = useState({ RBC: 0, WBC: 0, Platelet: 0 });
 
@@ -41,8 +37,8 @@ export default function VideoTracker() {
       const v = videoRef.current;
       v.srcObject = stream;
       await v.play();
-      connect();
-    } catch (e) {
+      begin();
+    } catch {
       setError("Could not access the webcam. Check browser permissions.");
       setStatus("error");
     }
@@ -60,70 +56,59 @@ export default function VideoTracker() {
     v.srcObject = null;
     v.src = url;
     v.loop = true;
-    v.play().then(connect).catch(() => {
+    v.play().then(begin).catch(() => {
       setError("Could not play that video file.");
       setStatus("error");
     });
   }
 
-  // ── websocket + frame loop ──────────────────────────────────────────────
-  function connect() {
-    setStatus("connecting");
-    resetTracking();
-    const ws = new WebSocket(trackSocketUrl());
-    ws.binaryType = "arraybuffer";
-    wsRef.current = ws;
-
-    ws.onmessage = (ev) => {
-      const msg = JSON.parse(ev.data);
-      if (msg.type === "ready") {
-        setRunning(true);
-        setStatus("live");
-        loop();
-      } else if (msg.type === "result") {
-        inFlight.current = false;
-        setCounts(msg.unique_counts);
-        draw(msg.tracks);
-      } else if (msg.type === "error") {
-        inFlight.current = false;   // skip the bad frame, keep going
-      }
-    };
-    ws.onerror = () => { setError("Connection to the tracking server failed."); setStatus("error"); };
-    ws.onclose = () => { if (status === "live") setStatus("stopped"); };
+  // ── local inference loop ─────────────────────────────────────────────────
+  async function begin() {
+    setStatus("loading");
+    trackerRef.current.reset();
+    trails.current.clear();
+    inFlight.current = false;
+    setCounts({ RBC: 0, WBC: 0, Platelet: 0 });
+    try {
+      await loadDetector();          // download + compile the model once
+    } catch {
+      setError("Could not load the detection model.");
+      setStatus("error");
+      return;
+    }
+    setRunning(true);
+    setStatus("live");
+    loop();
   }
 
   function loop() {
     rafRef.current = requestAnimationFrame(loop);
-    const v = videoRef.current, ws = wsRef.current;
-    if (!v || !ws || ws.readyState !== WebSocket.OPEN) return;
-    if (inFlight.current || v.readyState < 2 || !v.videoWidth) return;
-
-    const cap = captureRef.current;
-    const h = Math.round(TARGET_W * (v.videoHeight / v.videoWidth));
-    cap.width = TARGET_W;
-    cap.height = h;
-    cap.getContext("2d").drawImage(v, 0, 0, TARGET_W, h);
+    const v = videoRef.current;
+    if (!v || inFlight.current || v.readyState < 2 || !v.videoWidth) return;
 
     inFlight.current = true;
-    cap.toBlob(
-      (blob) => {
-        if (blob && ws.readyState === WebSocket.OPEN) ws.send(blob);
-        else inFlight.current = false;
-      },
-      "image/jpeg",
-      JPEG_QUALITY,
-    );
+    detect(v, v.videoWidth, v.videoHeight)
+      .then(({ detections }) => {
+        const { tracks, unique_counts } = trackerRef.current.update(detections);
+        setCounts(unique_counts);
+        draw(tracks, v.videoWidth, v.videoHeight);
+      })
+      .catch(() => {})
+      .finally(() => { inFlight.current = false; });
   }
 
   // ── overlay drawing ─────────────────────────────────────────────────────
-  function draw(tracks) {
-    const cap = captureRef.current, ov = overlayRef.current;
-    if (!cap || !ov) return;
-    ov.width = cap.width;
-    ov.height = cap.height;
+  function draw(tracks, vw, vh) {
+    const ov = overlayRef.current;
+    if (!ov) return;
+    ov.width = vw;
+    ov.height = vh;
     const ctx = ov.getContext("2d");
     ctx.clearRect(0, 0, ov.width, ov.height);
     const font = getComputedStyle(document.body).fontFamily;
+    const scale = vw / 640;
+    const lineW = Math.max(1.5, 2 * scale);
+    const fontSize = Math.max(11, 13 * scale);
 
     // update + draw trails (under the boxes)
     tracks.forEach((t) => {
@@ -138,7 +123,7 @@ export default function VideoTracker() {
       if (!arr || arr.length < 2) return;
       ctx.strokeStyle = CELL_TYPES[t.cell_type]?.colour ?? "#fff";
       ctx.globalAlpha = 0.4;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = lineW;
       ctx.beginPath();
       arr.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.stroke();
@@ -146,18 +131,18 @@ export default function VideoTracker() {
     });
 
     // boxes + id labels
-    ctx.font = `600 12px ${font}`;
+    ctx.font = `600 ${fontSize}px ${font}`;
     ctx.textBaseline = "middle";
     tracks.forEach((t) => {
       const colour = CELL_TYPES[t.cell_type]?.colour ?? "#fff";
       const { x, y, w, h } = t.box;
       ctx.strokeStyle = colour;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = lineW;
       ctx.strokeRect(x, y, w, h);
 
       const label = `#${t.id} ${t.cell_type}`;
       const tw = ctx.measureText(label).width;
-      const pillH = 16;
+      const pillH = fontSize + 5;
       const ly = y > pillH ? y - pillH : y + h;
       ctx.fillStyle = colour;
       ctx.fillRect(x, ly, tw + 8, pillH);
@@ -167,12 +152,6 @@ export default function VideoTracker() {
   }
 
   // ── lifecycle ───────────────────────────────────────────────────────────
-  function resetTracking() {
-    trails.current.clear();
-    inFlight.current = false;
-    setCounts({ RBC: 0, WBC: 0, Platelet: 0 });
-  }
-
   function start() {
     if (source === "webcam") startWebcam();
     else fileInput.current?.click();
@@ -186,16 +165,14 @@ export default function VideoTracker() {
 
   function teardown() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    if (wsRef.current) { try { wsRef.current.close(); } catch {} wsRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach((t) => t.stop()); streamRef.current = null; }
     if (objUrlRef.current) { URL.revokeObjectURL(objUrlRef.current); objUrlRef.current = null; }
     inFlight.current = false;
   }
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
-
   const statusText = {
-    idle: "Ready", connecting: "Connecting…", live: "Tracking live",
+    idle: "Ready", loading: "Loading model…", live: "Tracking live",
     stopped: "Stopped", error: "Error",
   }[status];
 
@@ -239,7 +216,7 @@ export default function VideoTracker() {
         <div className="video-stage">
           <video ref={videoRef} className="video-el" muted playsInline />
           <canvas ref={overlayRef} className="video-overlay" />
-          {!running && status !== "connecting" && (
+          {!running && status !== "loading" && (
             <div className="video-placeholder">
               <Icon icon="lucide:scan-eye" width="30" height="30" />
               <p>{source === "webcam" ? "Start to track cells from your webcam" : "Start, then choose a video file"}</p>
@@ -252,7 +229,6 @@ export default function VideoTracker() {
           )}
         </div>
 
-        <canvas ref={captureRef} style={{ display: "none" }} />
         <input
           ref={fileInput}
           type="file"
