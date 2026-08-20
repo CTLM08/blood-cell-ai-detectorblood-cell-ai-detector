@@ -1,13 +1,3 @@
----
-title: Blood Cell AI Detector
-emoji: 🔬
-colorFrom: red
-colorTo: indigo
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # 🔬 Blood Cell AI Detector
 
 Detect and count **red blood cells (RBC)**, **white blood cells (WBC)**, and
@@ -139,24 +129,22 @@ python -m model.export
 
 ---
 
-## Deploy on Hugging Face Spaces
+## Deploy (free static hosting)
 
-The whole app runs as **one Docker container** (FastAPI serves both the API and
-the built React frontend on port 7860). To host it:
+Because the model runs **in the browser** (`frontend/public/best.onnx` +
+onnxruntime-web), the production build is a plain static site — no server, so it
+hosts free on a Hugging Face **Static** Space, GitHub Pages, Netlify, etc.
 
-1. Create a **Docker Space** at <https://huggingface.co/new-space> (SDK: *Docker*).
-2. Push this repository to the Space's git remote:
-   ```bash
-   git remote add space https://huggingface.co/spaces/<user>/<space-name>
-   git push space main
-   ```
-   (Authenticate with a Hugging Face **access token** as the password — create one
-   at <https://huggingface.co/settings/tokens>.)
-3. The Space builds the `Dockerfile` and goes live at
-   `https://<user>-<space-name>.hf.space`.
+```bash
+cd frontend && npm run build      # -> frontend/dist/ (self-contained static site)
+```
 
-The Space config (SDK + port) is read from the YAML header at the top of this file.
-Note: on the free CPU tier, detection/tracking work but run slowly (~a few fps).
+Then upload `frontend/dist/` to any static host. For a Hugging Face **Static**
+Space, the model (`best.onnx`) and WASM runtime exceed 10 MB, so track them with
+Git LFS (`*.onnx` and `*.wasm`) before pushing.
+
+> A `Dockerfile` is also included for the older server-based setup (FastAPI
+> serving the API + frontend on port 7860), if you'd rather run it that way.
 
 ## Accuracy & limitations
 
