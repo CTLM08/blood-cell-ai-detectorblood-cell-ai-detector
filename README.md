@@ -1,3 +1,13 @@
+---
+title: Blood Cell AI Detector
+emoji: 🔬
+colorFrom: red
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # 🔬 Blood Cell AI Detector
 
 Detect and count **red blood cells (RBC)**, **white blood cells (WBC)**, and
@@ -128,6 +138,25 @@ python -m model.export
 > argument (as above); it is never written to a file.
 
 ---
+
+## Deploy on Hugging Face Spaces
+
+The whole app runs as **one Docker container** (FastAPI serves both the API and
+the built React frontend on port 7860). To host it:
+
+1. Create a **Docker Space** at <https://huggingface.co/new-space> (SDK: *Docker*).
+2. Push this repository to the Space's git remote:
+   ```bash
+   git remote add space https://huggingface.co/spaces/<user>/<space-name>
+   git push space main
+   ```
+   (Authenticate with a Hugging Face **access token** as the password — create one
+   at <https://huggingface.co/settings/tokens>.)
+3. The Space builds the `Dockerfile` and goes live at
+   `https://<user>-<space-name>.hf.space`.
+
+The Space config (SDK + port) is read from the YAML header at the top of this file.
+Note: on the free CPU tier, detection/tracking work but run slowly (~a few fps).
 
 ## Accuracy & limitations
 

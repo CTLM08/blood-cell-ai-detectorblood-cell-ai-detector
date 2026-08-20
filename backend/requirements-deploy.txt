@@ -1,0 +1,9 @@
+# Runtime-only dependencies for serving (no training tools like roboflow/pytest).
+# torch/torchvision are installed separately (CPU build) in the Dockerfile.
+ultralytics==8.4.91
+lapx==0.9.4
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pillow==10.1.0
+pyyaml==6.0.1

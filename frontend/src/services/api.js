@@ -1,12 +1,17 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// In production the frontend is served by the same FastAPI server, so the API
+// lives at the same origin (API_BASE = ""). For local dev, VITE_API_URL in
+// frontend/.env points at the separate backend (http://localhost:8000).
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 /**
  * WebSocket URL for the live cell-tracking endpoint.
- * Derived from the API base by swapping the http(s) scheme for ws(s).
+ * Uses API_BASE if set, otherwise derives ws(s) from the current page origin.
  * @returns {string}
  */
 export function trackSocketUrl() {
-  return API_BASE.replace(/^http/, "ws") + "/ws/track";
+  if (API_BASE) return API_BASE.replace(/^http/, "ws") + "/ws/track";
+  const proto = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${proto}://${window.location.host}/ws/track`;
 }
 
 /**

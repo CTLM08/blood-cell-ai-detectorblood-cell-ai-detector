@@ -1,0 +1,23 @@
+# Keep the Docker build context small.
+.git/
+**/__pycache__/
+**/*.pyc
+venv/
+frontend/node_modules/
+frontend/dist/
+
+# Datasets and training artifacts (not needed to serve)
+model/data/
+model/data_v2/
+model/runs/
+demo/
+*.mp4
+
+# Model weights: keep only the served model, drop backups
+model/weights/*
+!model/weights/best.pt
+
+# Docs / local env
+*.pdf
+*.html
+frontend/.env
